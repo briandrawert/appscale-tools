@@ -73,6 +73,8 @@ class EC2Agent(BaseAgent):
 
   DESCRIBE_INSTANCES_RETRY_COUNT = 3
 
+  AUTH_GROUP_AUTHORIZE_MAX_ATTEMPTS = 5
+
 
   def configure_instance_security(self, parameters):
     """
@@ -111,12 +113,18 @@ class EC2Agent(BaseAgent):
 
     AppScaleLogger.log('Creating security group: {0}'.format(group))
     conn.create_security_group(group, 'AppScale security group')
-    conn.authorize_security_group(group, from_port=1,
-      to_port=65535, ip_protocol='udp', cidr_ip='0.0.0.0/0')
-    conn.authorize_security_group(group, from_port=1,
-      to_port=65535, ip_protocol='tcp', cidr_ip='0.0.0.0/0')
-    conn.authorize_security_group(group, ip_protocol='icmp',
-      cidr_ip='0.0.0.0/0')
+    for auth_attempt in range(1, self.AUTH_GROUP_AUTHORIZE_MAX_ATTEMPTS + 1):
+      try:
+        conn.authorize_security_group(group, from_port=1,
+          to_port=65535, ip_protocol='udp', cidr_ip='0.0.0.0/0')
+        conn.authorize_security_group(group, from_port=1,
+          to_port=65535, ip_protocol='tcp', cidr_ip='0.0.0.0/0')
+        conn.authorize_security_group(group, ip_protocol='icmp',
+          cidr_ip='0.0.0.0/0')
+      except boto.exception.EC2ResponseError as ec2error:
+        AppScaleLogger.log('Error authorizing security group: {0}. Trying ' \
+          'again in {0} seconds.'.format(str(ec2error), auth_attempt))
+        time.sleep(auth_attempt)
 
     return True
 
