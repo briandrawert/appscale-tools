@@ -112,8 +112,9 @@ class EC2Agent(BaseAgent):
     LocalState.write_key_file(ssh_key, key_pair.material)
 
     AppScaleLogger.log('Creating security group: {0}'.format(group))
-    conn.create_security_group(group, 'AppScale security group')
-    for auth_attempt in range(1, self.AUTH_GROUP_AUTHORIZE_MAX_ATTEMPTS + 1):
+    conn.create_security_group(group, 'AppScale security group'a
+    auth_attempt = 1
+    while True:
       try:
         conn.authorize_security_group(group, from_port=1,
           to_port=65535, ip_protocol='udp', cidr_ip='0.0.0.0/0')
@@ -129,6 +130,7 @@ class EC2Agent(BaseAgent):
           raise AgentRuntimeException('Error authorizing security group: {0}.' \
             .format(str(ec2error)))
         else:
+          auth_attempt += 1
           AppScaleLogger.log('Error authorizing security group: {0}. Trying ' \
             'again in {0} seconds.'.format(str(ec2error), auth_attempt))
           time.sleep(auth_attempt)
