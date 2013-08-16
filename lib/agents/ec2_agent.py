@@ -126,7 +126,8 @@ class EC2Agent(BaseAgent):
         if auth_attempt == AUTH_GROUP_AUTHORIZE_MAX_ATTEMPTS:
           AppScaleLogger.log('Error authorizing security group: {0}.' .format(
             str(ec2error)))
-          raise ec2error
+          raise AgentRuntimeException('Error authorizing security group: {0}.' \
+            .format(str(ec2error)))
         else:
           AppScaleLogger.log('Error authorizing security group: {0}. Trying ' \
             'again in {0} seconds.'.format(str(ec2error), auth_attempt))
