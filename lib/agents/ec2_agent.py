@@ -121,10 +121,16 @@ class EC2Agent(BaseAgent):
           to_port=65535, ip_protocol='tcp', cidr_ip='0.0.0.0/0')
         conn.authorize_security_group(group, ip_protocol='icmp',
           cidr_ip='0.0.0.0/0')
+        break
       except boto.exception.EC2ResponseError as ec2error:
-        AppScaleLogger.log('Error authorizing security group: {0}. Trying ' \
-          'again in {0} seconds.'.format(str(ec2error), auth_attempt))
-        time.sleep(auth_attempt)
+        if auth_attempt == AUTH_GROUP_AUTHORIZE_MAX_ATTEMPTS:
+          AppScaleLogger.log('Error authorizing security group: {0}.' .format(
+            str(ec2error)))
+          raise ec2error
+        else:
+          AppScaleLogger.log('Error authorizing security group: {0}. Trying ' \
+            'again in {0} seconds.'.format(str(ec2error), auth_attempt))
+          time.sleep(auth_attempt)
 
     return True
 
