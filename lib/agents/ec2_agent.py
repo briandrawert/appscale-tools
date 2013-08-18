@@ -4,9 +4,10 @@ Helper library for EC2 interaction
 from agents.base_agent import AgentRuntimeException
 from agents.base_agent import BaseAgent 
 from agents.base_agent import AgentConfigurationException
-import boto
 from boto.exception import EC2ResponseError
+import boto
 import datetime
+import logging
 import os
 import time
 from appscale_logger import AppScaleLogger
@@ -142,23 +143,30 @@ class EC2Agent(BaseAgent):
     Returns:
       True if the configuration is authorized for the group, otherwise False.
     """
+    logging.debug("check_if_security_group_has_config() config={0}".format(group_config))
     try:
       rules = conn.get_all_security_groups(group)[0].rules
     except IndexError:
+      logging.debug("got IndexError")
       return False
     for perm in rules:
       if 'ip_protocol' in group_config and \
         group_config['ip_protocol'] != perm.ip_protocol:
+        logging.debug("ip_protocol mismatch: {0} != {1}".format(group_config['ip_protocol'], perm.ip_protocol))
         continue
       if 'from_port' in group_config and \
-        group_config['from_port'] != perm.from_port:
+        str(group_config['from_port']) != perm.from_port:
+        logging.debug("from_port mismatch: {0} != {1}".format(group_config['from_port'], perm.from_port))
         continue
       if 'to_port' in group_config and \
-        group_config['to_port'] != perm.to_port:
+        str(group_config['to_port']) != perm.to_port:
+        logging.debug("to_port mismatch: {0} != {1}".format(group_config['to_port'], perm.to_port))
         continue
       if 'cidr_ip' in group_config and \
         group_config['cidr_ip'] not in [str(grant) for grant in perm.grants]:
+        logging.debug("cidr_ip mismatch: {0} not in {1}".format(group_config['cidr_ip'], [str(grant) for grant in perm.grants]))
         continue
+      logging.debug("Found Match")
       return True
     return False
 
@@ -172,6 +180,7 @@ class EC2Agent(BaseAgent):
     Raises:
       AgentRuntimeException if there is an error setting the group.
     """
+    logging.debug("set_security_group_config() config={0}".format(group_config))
     auth_attempt = 1
     while True:
       try:
